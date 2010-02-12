@@ -1,0 +1,16 @@
+unsec
+=====
+
+This is a quick knock up of a tool to extract self extracting archives from ROOL (www.riscosopen.co.uk).
+
+So far, it is very quick and dirty.  The file format was derived over a 10 minute investigation.  It has been tested under Linux only.
+
+TODO
+====
+Understand file format better, to make the code tidier.
+Set correct date on created files.
+Have an option to stop file types being appended to file names.
+Have an option to list file in an archive without extracting anything.
+Have an option to extract specific files.
+Port to Windows.
+
