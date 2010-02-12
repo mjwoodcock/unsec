@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-//#include "lzw.h"
 #include "compress.h"
 
 #define STATE_NULL 0
@@ -70,16 +69,10 @@ print_dir_name()
 		return;
 	}
 
-	num = fgetc(stdin);
-	num |= fgetc(stdin) << 8;
-	num |= fgetc(stdin) << 16;
-	num |= fgetc(stdin) << 24;
+	num = read_word();
 	if (debug)
 		printf("Got dir %ld %x\n", here, num);
-	fgetc(stdin);
-	fgetc(stdin);
-	fgetc(stdin);
-	fgetc(stdin);
+	read_word(); // I'm not sure what this word is for, yet
 }
 
 void
@@ -97,10 +90,9 @@ print_file_name()
 	{
 		return;
 	}
-	num = fgetc(stdin);
-	num |= fgetc(stdin) << 8;
-	num |= fgetc(stdin) << 16;
-	num |= fgetc(stdin) << 24;
+
+	num = read_word();
+
 	bufp = &file_name[0];
 	do {
 		*bufp++ = (char)fgetc(stdin);
@@ -123,10 +115,8 @@ print_seq()
 	{
 		return;
 	}
-	num = fgetc(stdin);
-	num |= fgetc(stdin) << 8;
-	num |= fgetc(stdin) << 16;
-	num |= fgetc(stdin) << 24;
+
+	num = read_word();
 
 	if (debug)
 		printf("Got seq %x\n", num);
@@ -171,10 +161,7 @@ extract_data()
 	}
 
 	here = ftell(stdin);
-	num = fgetc(stdin);
-	num |= fgetc(stdin) << 8;
-	num |= fgetc(stdin) << 16;
-	num |= fgetc(stdin) << 24;
+	num = read_word();
 	if (debug)
 		printf("Got data %ld %d\n", here, num);
 
