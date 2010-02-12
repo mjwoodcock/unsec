@@ -22,16 +22,17 @@ static int debug = 0;
 static int done_header = 0;
 
 static char file_name[1024];
+static FILE *infp;
 
 unsigned int
 read_word()
 {
 	unsigned int num = 0;
 
-	num = fgetc(stdin);
-	num |= fgetc(stdin) << 8;
-	num |= fgetc(stdin) << 16;
-	num |= fgetc(stdin) << 24;
+	num = fgetc(infp);
+	num |= fgetc(infp) << 8;
+	num |= fgetc(infp) << 16;
+	num |= fgetc(infp) << 24;
 
 	return num;
 }
@@ -62,7 +63,7 @@ print_dir_name()
 	int num = 0;
 	unsigned long here;
 
-	here = ftell(stdin);
+	here = ftell(infp);
 	done_header++;
 	if (done_header < 4)
 	{
@@ -84,7 +85,7 @@ print_file_name()
 	unsigned long here;
 	char *bufp = &file_name[0];
 
-	here = ftell(stdin);
+	here = ftell(infp);
 	done_header++;
 	if (done_header < 4)
 	{
@@ -95,10 +96,10 @@ print_file_name()
 
 	bufp = &file_name[0];
 	do {
-		*bufp++ = (char)fgetc(stdin);
-		*bufp++ = (char)fgetc(stdin);
-		*bufp++ = (char)fgetc(stdin);
-		*bufp++ = (char)fgetc(stdin);
+		*bufp++ = (char)fgetc(infp);
+		*bufp++ = (char)fgetc(infp);
+		*bufp++ = (char)fgetc(infp);
+		*bufp++ = (char)fgetc(infp);
 	} while (*(bufp - 1) != '\0');
 	file_name_to_unix();
 	if (debug)
@@ -160,7 +161,7 @@ extract_data()
 		return;
 	}
 
-	here = ftell(stdin);
+	here = ftell(infp);
 	num = read_word();
 	if (debug)
 		printf("Got data %ld %d\n", here, num);
@@ -195,13 +196,13 @@ extract_data()
 	{
 		for (i = 0; i < orig_size; i++)
 		{
-			c = fgetc(stdin);
+			c = fgetc(infp);
 			fputc(c, fp);
 		}
 	}
 	else
 	{
-		uncompress(cmp_size, orig_size, stdin, fp, UNIX_COMPRESS);
+		uncompress(cmp_size, orig_size, infp, fp, UNIX_COMPRESS);
 	}
 	fclose(fp);
 	// Fixme: read to end of 4 byte block
@@ -213,7 +214,27 @@ main(int argc, char *argv[])
 	int c;
 	int state = STATE_NULL;
 
-	while ((c = fgetc(stdin)) != EOF)
+	if (argc != 2)
+	{
+		fprintf(stderr, "Usage: %s [sec file]\n");
+		exit(1);
+	}
+
+	if (strcmp(argv[1], "-") == 0)
+	{
+		infp = stdin;
+	}
+	else
+	{
+		infp = fopen(argv[1], "r");
+		if (!infp)
+		{
+			fprintf(stderr, "Can not open %s for reading\n", argv[1]);
+			exit(1);
+		}
+	}
+
+	while ((c = fgetc(infp)) != EOF)
 	{
 		switch (state)
 		{
