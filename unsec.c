@@ -191,7 +191,19 @@ extract_data()
 	{
 		printf("Failed to open file %s\n", file_name);
 	}
-	uncompress(cmp_size, orig_size, stdin, fp, UNIX_COMPRESS);
+	if (cmp_size == 0)
+	{
+		for (i = 0; i < orig_size; i++)
+		{
+			c = fgetc(stdin);
+			fputc(c, fp);
+		}
+	}
+	else
+	{
+		uncompress(cmp_size, orig_size, stdin, fp, UNIX_COMPRESS);
+		printf("\n");
+	}
 	fclose(fp);
 	// Fixme: read to end of 4 byte block
 }
