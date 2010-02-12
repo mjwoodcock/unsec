@@ -202,7 +202,6 @@ extract_data()
 	else
 	{
 		uncompress(cmp_size, orig_size, stdin, fp, UNIX_COMPRESS);
-		printf("\n");
 	}
 	fclose(fp);
 	// Fixme: read to end of 4 byte block

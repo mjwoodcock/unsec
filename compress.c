@@ -171,7 +171,7 @@ static int offset, size;	/* from getcode() */
 static code_int getcode(FILE *ifp);
 
 int testing = 0;
-int quiet = 0;
+int quiet = 1;
 
 #define read_byte fgetc
 #define calccrc(a) 
