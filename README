@@ -5,6 +5,8 @@ This is a quick knock up of a tool to extract self extracting archives from ROOL
 
 So far, it is very quick and dirty.  The file format was derived over a 10 minute investigation.  It has been tested under Linux only.
 
+compress.c is taken from nspark.  I'll try feeding the changes back if I can work out who maintains it these days.
+
 TODO
 ====
 Understand file format better, to make the code tidier.
