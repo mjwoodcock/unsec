@@ -7,6 +7,8 @@ So far, it is very quick and dirty.  The file format was derived over a 10 minut
 
 compress.c is taken from nspark.  I'll try feeding the changes back if I can work out who maintains it these days.
 
+It will probably only work with archives created on or after 13 Feb 2010.
+
 TODO
 ====
 Understand file format better, to make the code tidier.
