@@ -4,6 +4,16 @@
 
 #include "compress.h"
 
+struct header
+{
+	unsigned int check_code1;
+	unsigned int check_code2;
+	unsigned int total_size;
+	unsigned int zero;
+	unsigned int thirty_two;
+	unsigned int data_offset;
+};
+
 #define STATE_NULL 0
 #define STATE_GOT_R 1
 #define STATE_GOT_RN 2
@@ -17,6 +27,8 @@
 #define STATE_GOT_RSQS 10
 #define STATE_GOT_RDA 12
 #define STATE_GOT_RDAT 13
+
+#define DATA_OFFSET_POINTER 24
 
 static int debug = 0;
 static int done_header = 0;
@@ -35,6 +47,58 @@ read_word()
 	num |= fgetc(infp) << 24;
 
 	return num;
+}
+
+int
+open_archive_file(FILE **fp, char *file_name, struct header *header)
+{
+	*fp = fopen(file_name, "r");
+	if (!*fp)
+	{
+		return 1;
+	}
+
+	read_word();
+	header->check_code1 = read_word();
+	header->check_code2 = read_word();
+	header->total_size = read_word();
+	header->zero = read_word();
+	header->thirty_two = read_word();
+	header->data_offset = read_word();
+
+	if (header->check_code1 != 0x79766748)
+	{
+		return 2;
+	}
+	if (header->check_code2 != 0x216c6776)
+	{
+		return 2;
+	}
+	if (header->zero != 0)
+	{
+		return 2;
+	}
+	if (header->thirty_two != 32)
+	{
+		return 2;
+	}
+
+	return 0;
+}
+
+int
+skip_to_data(struct header *header)
+{
+	int r;
+	unsigned int ptr;
+
+	r = fseek(infp, header->data_offset - DATA_OFFSET_POINTER, SEEK_SET);
+	if (r != 0)
+	{
+		fprintf(stderr, "Can not find compressed data\n");
+	}
+
+	return r;
 }
 
 void
@@ -213,6 +277,8 @@ main(int argc, char *argv[])
 {
 	int c;
 	int state = STATE_NULL;
+	int r;
+	struct header header;
 
 	if (argc != 2)
 	{
@@ -220,22 +286,37 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (strcmp(argv[1], "-") == 0)
+	r = open_archive_file(&infp, argv[1], &header);
+	if (r != 0)
 	{
-		infp = stdin;
-	}
-	else
-	{
-		infp = fopen(argv[1], "r");
-		if (!infp)
+		switch(r)
 		{
-			fprintf(stderr, "Can not open %s for reading\n", argv[1]);
-			exit(1);
+		case 1:
+			fprintf(stderr, "Can not open %s for reading\n", file_name);
+			break;
+		case 2:
+			fprintf(stderr, "Bad archive header\n");
+			break;
 		}
+		exit(1);
+	}
+
+	r = skip_to_data(&header);
+	if (r != 0)
+	{
+		exit(1);
 	}
 
 	while ((c = fgetc(infp)) != EOF)
 	{
+		if (isalpha(c))
+		{
+			printf("%c\n", c);
+		}
+		else
+		{
+			printf("%x\n", c);
+		}
 		switch (state)
 		{
 		case STATE_NULL:
