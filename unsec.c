@@ -309,14 +309,6 @@ main(int argc, char *argv[])
 
 	while ((c = fgetc(infp)) != EOF)
 	{
-		if (isalpha(c))
-		{
-			printf("%c\n", c);
-		}
-		else
-		{
-			printf("%x\n", c);
-		}
 		switch (state)
 		{
 		case STATE_NULL:
