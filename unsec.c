@@ -145,28 +145,34 @@ file_name_to_unix()
 }
 
 void
-print_dir_name()
+handle_dir_data()
 {
 	int c;
-	int num = 0;
+	int chunk_size = 0;
+	int attributes = 0;
 
-	num = read_word();
+	chunk_size = read_word();
+	attributes = read_word();
 	if (debug)
-		printf("Got dir %x\n", num);
-	read_word(); // I'm not sure what this word is for, yet
+		printf("Got dir %s %x\n", file_name, attributes);
+
+	if (!list_contents)
+	{
+		mkdir(file_name, 0777);
+	}
 }
 
 void
-print_file_name()
+handle_file_name()
 {
 	int c;
-	int num;
+	int chunk_size;
 	int i;
 	char *bufp = &file_name[0];
 
 	*bufp = '\0';
 
-	num = read_word();
+	chunk_size = read_word();
 
 	bufp = &file_name[0];
 	do {
@@ -175,37 +181,22 @@ print_file_name()
 		*bufp++ = (char)fgetc(infp);
 		*bufp++ = (char)fgetc(infp);
 	} while (*(bufp - 1) != '\0');
+
 	file_name_to_unix();
+
 	if (debug)
-		printf("Got file %x %s\n", num, file_name);
+		printf("Got file %x %s\n", chunk_size, file_name);
 }
 
 void
-print_seq()
+handle_sqs()
 {
-	int num;
+	int chunk_size;
 
-	num = read_word();
+	chunk_size = read_word();
 
 	if (debug)
-		printf("Got seq %x\n", num);
-}
-
-void
-create_dir()
-{
-	char dir_name[1024];
-	char cmd[1024];
-	char *p;
-
-	strcpy(dir_name, file_name);
-	p = strrchr(dir_name, '/');
-	if (p)
-	{
-		*p = '\0';
-	}
-	snprintf(cmd, sizeof(cmd), "mkdir -p %s\n", dir_name);
-	system(cmd);
+		printf("Got sqs %x\n", chunk_size);
 }
 
 void
@@ -250,7 +241,6 @@ extract_data()
 
 	if (!list_contents)
 	{
-		create_dir();
 		if ((fp = fopen(file_name, "w")) == NULL)
 		{
 			printf("Failed to open file %s\n", file_name);
@@ -415,14 +405,14 @@ main(int argc, char *argv[])
 		case STATE_GOT_RDI:
 			if (c == 'r')
 			{
-				print_dir_name();
+				handle_dir_data();
 			}
 			state = STATE_NULL;
 			break;
 		case STATE_GOT_RNA:
 			if (c == 'm')
 			{
-				print_file_name();
+				handle_file_name();
 			}
 			state = STATE_NULL;
 			break;
@@ -436,7 +426,7 @@ main(int argc, char *argv[])
 		case STATE_GOT_RSQ:
 			if (c == 's')
 			{
-				print_seq();
+				handle_sqs();
 			}
 			state = STATE_NULL;
 			break;
