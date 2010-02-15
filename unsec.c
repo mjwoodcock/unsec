@@ -31,7 +31,6 @@ struct header
 #define DATA_OFFSET_POINTER 24
 
 static int debug = 0;
-static int done_header = 0;
 static int list_contents = 0;
 static int append_filetype = 1;
 
@@ -102,12 +101,25 @@ int
 skip_to_data(struct header *header)
 {
 	int r;
+	int c;
 	unsigned int ptr;
 
 	r = fseek(infp, header->data_offset - DATA_OFFSET_POINTER, SEEK_SET);
 	if (r != 0)
 	{
-		fprintf(stderr, "Can not find compressed data\n");
+		return 1;
+	}
+	else
+	{
+		do
+		{
+			c = fgetc(infp);
+		} while (!feof(infp) && c != '\0');
+	}
+
+	if (feof(infp))
+	{
+		return 2;
 	}
 
 	return r;
@@ -138,12 +150,6 @@ print_dir_name()
 	int c;
 	int num = 0;
 
-	done_header++;
-	if (done_header < 4)
-	{
-		return;
-	}
-
 	num = read_word();
 	if (debug)
 		printf("Got dir %x\n", num);
@@ -159,11 +165,6 @@ print_file_name()
 	char *bufp = &file_name[0];
 
 	*bufp = '\0';
-	done_header++;
-	if (done_header < 4)
-	{
-		return;
-	}
 
 	num = read_word();
 
@@ -183,12 +184,6 @@ void
 print_seq()
 {
 	int num;
-
-	done_header++;
-	if (done_header < 4)
-	{
-		return;
-	}
 
 	num = read_word();
 
@@ -226,12 +221,6 @@ extract_data()
 	int i;
 	FILE *fp;
 	char file_type[10];
-
-	done_header++;
-	if (done_header < 4)
-	{
-		return;
-	}
 
 	chunk_size = read_word();
 	if (debug)
@@ -349,6 +338,15 @@ main(int argc, char *argv[])
 	r = skip_to_data(&header);
 	if (r != 0)
 	{
+		switch (r)
+		{
+		case 1:
+			fprintf(stderr, "Can not find compressed data\n");
+			break;
+		case 2:
+			fprintf(stderr, "Unexpected end of file\n");
+			break;
+		}
 		exit(1);
 	}
 
