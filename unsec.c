@@ -63,7 +63,7 @@ read_word()
 int
 open_archive_file(FILE **fp, char *file_name, struct header *header)
 {
-	*fp = fopen(file_name, "r");
+	*fp = fopen(file_name, "rb");
 	if (!*fp)
 	{
 		return 1;
@@ -241,7 +241,7 @@ extract_data()
 
 	if (!list_contents)
 	{
-		if ((fp = fopen(file_name, "w")) == NULL)
+		if ((fp = fopen(file_name, "wb")) == NULL)
 		{
 			printf("Failed to open file %s\n", file_name);
 		}
