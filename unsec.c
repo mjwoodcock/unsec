@@ -32,9 +32,21 @@ struct header
 
 static int debug = 0;
 static int done_header = 0;
+static int list_contents = 0;
+static int append_filetype = 1;
 
 static char file_name[1024];
 static FILE *infp;
+
+void
+usage(char *progname)
+{
+	fprintf(stderr, "Usage: %s [-l] [-t] sec_file\n", progname);
+	fprintf(stderr, "  -l: list contents, don't extract\n");
+	fprintf(stderr, "  -t: don't append RISC OS filetype\n");
+
+	exit(1);
+}
 
 unsigned int
 read_word()
@@ -125,9 +137,7 @@ print_dir_name()
 {
 	int c;
 	int num = 0;
-	unsigned long here;
 
-	here = ftell(infp);
 	done_header++;
 	if (done_header < 4)
 	{
@@ -136,7 +146,7 @@ print_dir_name()
 
 	num = read_word();
 	if (debug)
-		printf("Got dir %ld %x\n", here, num);
+		printf("Got dir %x\n", num);
 	read_word(); // I'm not sure what this word is for, yet
 }
 
@@ -146,10 +156,9 @@ print_file_name()
 	int c;
 	int num;
 	int i;
-	unsigned long here;
 	char *bufp = &file_name[0];
 
-	here = ftell(infp);
+	*bufp = '\0';
 	done_header++;
 	if (done_header < 4)
 	{
@@ -167,7 +176,7 @@ print_file_name()
 	} while (*(bufp - 1) != '\0');
 	file_name_to_unix();
 	if (debug)
-		printf("Got file %ld %x %s\n", here, num, file_name);
+		printf("Got file %x %s\n", num, file_name);
 }
 
 void
@@ -207,9 +216,8 @@ create_dir()
 void
 extract_data()
 {
-	int num;
+	int chunk_size;
 	int c;
-	unsigned long here;
 	unsigned int load;
 	unsigned int exec;
 	unsigned int attrs;
@@ -225,15 +233,15 @@ extract_data()
 		return;
 	}
 
-	here = ftell(infp);
-	num = read_word();
+	chunk_size = read_word();
 	if (debug)
-		printf("Got data %ld %d\n", here, num);
+		printf("Got data %d\n", chunk_size);
 
 	load = read_word();
-	if ((load & 0xfff00000) == 0xfff00000) {
+	if (append_filetype &&((load & 0xfff00000) == 0xfff00000))
+	{
 		if (debug)
-			printf("Filetype = %x\n", (load >> 8) & 0xfff);
+			printf("filetype = %x\n", (load >> 8) & 0xfff);
 		snprintf(file_type, sizeof(file_type), ",%03x", (load >> 8) & 0xfff);
 		strcat(file_name, file_type);
 	}
@@ -251,12 +259,21 @@ extract_data()
 	if (debug)
 		printf("original size =  %d\n", orig_size);
 
-	create_dir();
-	if ((fp = fopen(file_name, "w")) == NULL)
+	if (!list_contents)
 	{
-		printf("Failed to open file %s\n", file_name);
+		create_dir();
+		if ((fp = fopen(file_name, "w")) == NULL)
+		{
+			printf("Failed to open file %s\n", file_name);
+		}
 	}
-	if (cmp_size == 0)
+
+	if (list_contents)
+	{
+		fseek(infp, chunk_size - 20, SEEK_CUR);
+		printf("%8d %s\n", orig_size, file_name);
+	}
+	else if (cmp_size == 0)
 	{
 		for (i = 0; i < orig_size; i++)
 		{
@@ -268,8 +285,12 @@ extract_data()
 	{
 		uncompress(cmp_size, orig_size, infp, fp, UNIX_COMPRESS);
 	}
-	fclose(fp);
-	// Fixme: read to end of 4 byte block
+
+	if (!list_contents)
+	{
+		fclose(fp);
+	}
+	// FIXME: read to end of 4 byte block
 }
 
 int
@@ -279,14 +300,38 @@ main(int argc, char *argv[])
 	int state = STATE_NULL;
 	int r;
 	struct header header;
+	int i;
+	char *file_name;
 
-	if (argc != 2)
+	for (i = 1; i < argc; i++)
 	{
-		fprintf(stderr, "Usage: %s [sec file]\n");
-		exit(1);
+		if (argv[i][0] == '-')
+		{
+			if (strcmp(argv[i], "-l") == 0)
+			{
+				list_contents = 1;
+			}
+			else if (strcmp(argv[i], "-t") == 0)
+			{
+				append_filetype = 0;
+			}
+			else if (strcmp(argv[i], "-h") == 0)
+			{
+				usage(argv[0]);
+			}
+		}
+		else
+		{
+			file_name = argv[i];
+		}
 	}
 
-	r = open_archive_file(&infp, argv[1], &header);
+	if (argc < 2 || file_name == NULL)
+	{
+		usage(argv[0]);
+	}
+
+	r = open_archive_file(&infp, file_name, &header);
 	if (r != 0)
 	{
 		switch(r)
